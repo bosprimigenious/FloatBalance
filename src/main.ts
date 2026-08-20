@@ -284,7 +284,7 @@ function render(): void {
         <nav class="window-actions" aria-label="窗口操作">
           <button class="icon-button" data-action="refresh" title="刷新余额" aria-label="刷新余额">↻</button>
           <button class="icon-button" data-action="toggle-settings" title="连接 TrueSOTA" aria-label="连接 TrueSOTA">⚙</button>
-          <button class="icon-button" data-action="simulate-error" title="模拟网络错误" aria-label="模拟网络错误">!</button>
+          ${!isTauriRuntime() ? '<button class="icon-button" data-action="simulate-error" title="模拟网络错误" aria-label="模拟网络错误">!</button>' : ""}
           <button class="icon-button" data-action="toggle-critical" title="仅严重错误" aria-label="仅严重错误">${state.preferences.criticalOnly ? "C" : "A"}</button>
           <button class="icon-button" data-action="toggle-theme" title="切换主题" aria-label="切换主题">◐</button>
           <button class="icon-button" data-action="toggle-collapse" title="折叠" aria-label="折叠">${state.preferences.collapsed ? "+" : "−"}</button>
@@ -499,6 +499,8 @@ async function clearTrueSotaConnection(): Promise<void> {
 }
 
 async function simulateClientError(): Promise<void> {
+  if (isTauriRuntime()) return;
+
   const event = await createClientNetworkError();
   state.errorStore.upsert(event);
   state.selectedFingerprint = event.fingerprint;
