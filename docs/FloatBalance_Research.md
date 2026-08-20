@@ -127,6 +127,7 @@ test-results/floatbalance-visual-check.png
 
 - 浏览器登录 token 存在于前端认证流程中，但本项目不读取该值。
 - 桌面端从系统凭据读取用户显式保存的账户级 Web token；`TRUE_SOTA_WEB_TOKEN` 只作为临时环境变量覆盖。
+- 输入层会自动归一化裸 token、`Bearer ...` 和 `Authorization: Bearer ...`，避免请求头变成双 `Bearer`。
 - 当前机器未保存账户级 token 时，直接运行会显示配置缺失 ErrorBall。
 - 桌面端不显示静态 demo 余额；只有浏览器预览环境保留 Sub2 / DeepSeek demo 数据。
 - 真实接入后每 30 秒自动轮询刷新。

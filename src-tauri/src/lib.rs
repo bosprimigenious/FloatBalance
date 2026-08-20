@@ -49,6 +49,46 @@ fn read_stored_credential(account: &str) -> Option<String> {
         .filter(|value| !value.trim().is_empty())
 }
 
+fn strip_bearer_prefix(value: &str) -> Option<&str> {
+    let trimmed = value.trim_start();
+    let prefix = trimmed.get(..6)?;
+    if !prefix.eq_ignore_ascii_case("bearer") {
+        return None;
+    }
+
+    let rest = trimmed.get(6..)?;
+    if rest.chars().next().is_some_and(char::is_whitespace) {
+        return Some(rest.trim());
+    }
+
+    None
+}
+
+fn normalize_bearer_token(value: &str) -> String {
+    let mut token = value.trim().trim_matches(['"', '\'']).trim();
+
+    if let Some((name, rest)) = token.split_once(':') {
+        if name.trim().eq_ignore_ascii_case("authorization") {
+            token = rest.trim();
+        }
+    }
+
+    while let Some(stripped) = strip_bearer_prefix(token) {
+        token = stripped;
+    }
+
+    token.trim().trim_matches(['"', '\'']).trim().to_string()
+}
+
+fn normalize_non_empty_token(value: String) -> Option<String> {
+    let token = normalize_bearer_token(&value);
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
+    }
+}
+
 fn configured_web_token_source() -> Option<String> {
     if non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"]).is_some() {
         return Some("env".to_string());
@@ -61,7 +101,10 @@ fn configured_web_token_source() -> Option<String> {
 
 fn true_sota_web_token() -> Option<String> {
     non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"])
-        .or_else(|| read_stored_credential(TRUE_SOTA_WEB_TOKEN_ACCOUNT))
+        .and_then(normalize_non_empty_token)
+        .or_else(|| {
+            read_stored_credential(TRUE_SOTA_WEB_TOKEN_ACCOUNT).and_then(normalize_non_empty_token)
+        })
 }
 
 fn true_sota_base_url(request: TrueSotaRequest) -> String {
@@ -119,13 +162,13 @@ fn truesota_config_status() -> TrueSotaConfigStatus {
 fn save_truesota_credentials(
     request: TrueSotaCredentialSaveRequest,
 ) -> Result<TrueSotaConfigStatus, String> {
-    let web_token = request.web_token.trim();
+    let web_token = normalize_bearer_token(&request.web_token);
     if web_token.is_empty() {
         return Err("TrueSOTA account token is empty".to_string());
     }
 
     credential_entry(TRUE_SOTA_WEB_TOKEN_ACCOUNT)?
-        .set_password(web_token)
+        .set_password(&web_token)
         .map_err(|error| {
             format!("failed to save TrueSOTA token to system credential store: {error}")
         })?;

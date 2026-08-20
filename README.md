@@ -22,7 +22,7 @@ npm run tauri dev
 
 接入 TrueSOTA 账户级余额与错误列表：
 
-推荐在桌面端点击齿轮按钮打开“连接 TrueSOTA”，粘贴你显式授权的 Web Bearer token，或后续 TrueSOTA 提供的只读监控 token。FloatBalance 会把 token 存入本机系统凭据，不会回填显示，也不会写入仓库。
+推荐在桌面端点击齿轮按钮打开“连接 TrueSOTA”，粘贴你显式授权的 Web Bearer token，或后续 TrueSOTA 提供的只读监控 token。可以粘贴裸 token，也可以粘贴 `Authorization: Bearer ...` 整段；FloatBalance 会自动清洗前缀，并把 token 存入本机系统凭据，不会回填显示，也不会写入仓库。
 
 也可以临时用环境变量覆盖：
 

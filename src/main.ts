@@ -244,7 +244,7 @@ function renderTrueSotaSettings(): string {
       </div>
       <label class="token-field">
         <span>Web / 只读监控 Token</span>
-        <input data-credential="web-token" type="password" autocomplete="off" spellcheck="false" placeholder="Bearer token，只保存在本机系统凭据" />
+        <input data-credential="web-token" type="password" autocomplete="off" spellcheck="false" placeholder="可粘贴 token 或 Authorization: Bearer ..." />
       </label>
       <div class="settings-actions">
         <button data-action="save-truesota" ${buttonDisabled}>保存并刷新</button>

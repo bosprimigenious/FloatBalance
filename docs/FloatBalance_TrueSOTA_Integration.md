@@ -21,7 +21,7 @@
 
 ### 2.1 Web 账户余额与错误
 
-用户在“连接 TrueSOTA”面板中保存账户级 Web Bearer token，或后续 TrueSOTA 提供的只读监控 token 后，Tauri 后端会尝试调用：
+用户在“连接 TrueSOTA”面板中保存账户级 Web Bearer token，或后续 TrueSOTA 提供的只读监控 token 后，Tauri 后端会尝试调用。输入可以是裸 token、`Bearer ...`，或 `Authorization: Bearer ...`，保存与读取时都会归一化为裸 token。
 
 ```http
 GET https://true-sota.com/api/v1/user/profile
@@ -62,6 +62,13 @@ npm run tauri dev
 ```
 
 注意：`TRUE_SOTA_WEB_TOKEN` 目前属于网页登录态能力，不建议长期作为生产方案。更好的做法是让 TrueSOTA 提供只读监控 token，或在用户自管后端里做最小权限代理。
+
+若 `/api/v1/user/profile` 返回 401，优先检查：
+
+- 是否粘贴了过期 token。
+- token 是否属于 `true-sota.com` 当前账号，而不是某个单 API Key。
+- token 是否有访问账户资料接口的权限。
+- 如果从开发者工具复制了整段 `Authorization: Bearer ...`，当前版本会自动剥离前缀；仍 401 就不是双 `Bearer` 问题。
 
 ## 4. ErrorBall 映射
 

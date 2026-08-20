@@ -329,7 +329,7 @@ export async function loadTrueSotaProvider(): Promise<TrueSotaLoadResult> {
         await createProviderError(
           String(error),
           WEB_PROFILE_ENDPOINT,
-          "确认 TrueSOTA 账户 token 是否仍有效；不要把网页登录 token 提交进仓库。",
+          "可粘贴裸 token 或 Authorization: Bearer ...；若仍 401，说明 token 过期或没有账户接口权限。",
         ),
       );
     }
