@@ -9,6 +9,22 @@ FloatBalance 是一个跨平台桌面全局悬浮球项目，目标是在 Window
 - [产品 PRD](docs/FloatBalance_PRD.md)
 - [ErrorBall 技术文档](docs/FloatBalance_ErrorBall_TechSpec.md)
 - [技术风险与开发任务拆解](docs/FloatBalance_Development_Plan.md)
+- [技术调研与实现记录](docs/FloatBalance_Research.md)
+
+## 本地开发
+
+```powershell
+npm install
+npm run build
+npm run tauri dev
+```
+
+Windows 安装包构建：
+
+```powershell
+$env:CARGO_HTTP_PROXY='http://127.0.0.1:7897'
+npm run tauri build
+```
 
 ## HTML 预览
 
