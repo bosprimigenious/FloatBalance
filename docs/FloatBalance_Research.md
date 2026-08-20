@@ -94,18 +94,37 @@ test-results/floatbalance-visual-check.png
 
 | 风险 | 当前状态 | 下一步 |
 |---|---|---|
-| 真实 Sub2 / DeepSeek 接口字段 | 未接入 | 增加 BalanceProvider adapter 和 config.example.json |
+| 真实 Sub2 / DeepSeek 接口字段 | 未接入 | 增加 BalanceProvider adapter |
+| TrueSOTA API Key 余额 | 已接入 | `TRUE_SOTA_API_KEY` + `GET /v1/usage` |
+| TrueSOTA Web 账户余额 | 可选接入 | `TRUE_SOTA_WEB_TOKEN` + `GET /api/v1/user/profile` |
+| TrueSOTA Web 错误列表 | 可选接入 | `TRUE_SOTA_WEB_TOKEN` + `GET /api/v1/usage/errors` |
 | 密钥存储 | 未接入 | 接入系统 keyring 插件或 Rust 安全存储 |
 | 点击穿透跨平台表现 | Windows build 已编译，未人工交互验收 | 启动 Tauri dev 进行桌面实测 |
-| TrueSOTA 三仓库错误源 | 当前为 mock | 拉取仓库后补 adapter 字段 |
 | 自动更新/签名 | 未接入 | M5 处理 |
 
 ## 7. 下一步建议
 
 进入 M2：
 
-1. 添加 `BalanceProvider` 接口。
-2. 增加 `config.example.json`。
-3. 实现 Sub2 mock adapter 到真实 HTTP adapter 的切换点。
-4. 接入 DeepSeek balance adapter。
-5. 请求失败统一进入 ErrorEvent。
+1. 抽象 `BalanceProvider` 接口，避免后续 Sub2 / DeepSeek / TrueSOTA 分支继续长在 UI 层。
+2. 接入 DeepSeek balance adapter。
+3. 将 `/api/v1/usage/errors/{id}` 接入详情面板。
+4. 增加 ErrorBall 的单元测试和视觉回归测试。
+
+## 8. 2026-08-20 TrueSOTA 自检
+
+已登录页面：`https://true-sota.com/keys`
+
+只读结果：
+
+- 页面可见账户余额：已验证。出于公开仓库安全，不提交具体金额。
+- API Key 使用脚本指向：`GET /v1/usage`
+- 前端 Web API 基础路径：`/api/v1`
+- 账户资料：`GET /api/v1/user/profile`
+- 使用错误列表：`GET /api/v1/usage/errors`
+
+安全判断：
+
+- 浏览器登录 token 存在于前端认证流程中，但本项目不读取该值。
+- 桌面端只从本地环境变量读取用户显式提供的 `TRUE_SOTA_API_KEY` 或 `TRUE_SOTA_WEB_TOKEN`。
+- 当前机器未检测到 `TRUE_SOTA_API_KEY`，因此直接运行会显示配置缺失 ErrorBall，同时保留 Sub2 / DeepSeek demo 余额。

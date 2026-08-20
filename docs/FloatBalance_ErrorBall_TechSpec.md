@@ -61,7 +61,7 @@ type ErrorCategory =
 interface ErrorEvent {
   id: string;
   fingerprint: string;
-  source: "client" | "sota2api" | "insight" | "kiroking" | "deepseek" | "sub2" | "proxy";
+  source: "client" | "truesota" | "sota2api" | "insight" | "kiroking" | "deepseek" | "sub2" | "proxy";
   repo?: "truesota-sota2api" | "truesota-insight" | "truesota-kiroking";
   service?: string;
   category: ErrorCategory;
@@ -102,6 +102,21 @@ fingerprint = sha256(source + category + endpoint + normalized_message)
 - 将连续空白压缩为一个空格
 
 ## 4. 错误源 Adapter
+
+### 4.0 TrueSOTA 页面接口
+
+从 TrueSOTA 前端只读检查得到的接口边界：
+
+- `GET /v1/usage`：API Key 余额探针，可用 `TRUE_SOTA_API_KEY` 调用。
+- `GET /api/v1/user/profile`：账户资料和总余额，需要显式提供 Web Bearer token。
+- `GET /api/v1/usage/errors`：使用错误列表，需要显式提供 Web Bearer token。
+- `GET /api/v1/usage/errors/{id}`：错误详情，需要显式提供 Web Bearer token。
+
+安全约束：
+
+- 不读取浏览器 Cookie、localStorage、密码管理器或页面完整密钥。
+- 不把 token 写入配置文件或 Git。
+- 所有请求失败都先归一化为 `ErrorEvent`，再进入 `ErrorStore`。
 
 ### 4.1 客户端 Adapter
 

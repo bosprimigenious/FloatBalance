@@ -10,6 +10,7 @@ FloatBalance 是一个跨平台桌面全局悬浮球项目，目标是在 Window
 - [ErrorBall 技术文档](docs/FloatBalance_ErrorBall_TechSpec.md)
 - [技术风险与开发任务拆解](docs/FloatBalance_Development_Plan.md)
 - [技术调研与实现记录](docs/FloatBalance_Research.md)
+- [TrueSOTA 接入记录](docs/FloatBalance_TrueSOTA_Integration.md)
 
 ## 本地开发
 
@@ -18,6 +19,22 @@ npm install
 npm run build
 npm run tauri dev
 ```
+
+接入 TrueSOTA API Key 余额：
+
+```powershell
+$env:TRUE_SOTA_API_KEY="你的 TrueSOTA API Key"
+npm run tauri dev
+```
+
+可选接入网页登录态的账户余额与错误记录：
+
+```powershell
+$env:TRUE_SOTA_WEB_TOKEN="你显式提供的 TrueSOTA Web Bearer token"
+npm run tauri dev
+```
+
+`TRUE_SOTA_WEB_TOKEN` 不会写入仓库；默认也不会读取浏览器 Cookie 或 localStorage。
 
 Windows 安装包构建：
 

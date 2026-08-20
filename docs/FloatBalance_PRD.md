@@ -54,6 +54,19 @@ FloatBalance 是一个跨平台桌面悬浮球工具，面向需要频繁查看 
 | F15 | 错误确认 / 静音 | 用户可确认、暂时静音、复制错误摘要 |
 | F16 | 错误源管理 | 支持按服务启停错误源，如 `truesota-sota2api`、`truesota-insight`、`truesota-kiroking` |
 
+### 3.2.1 TrueSOTA 真实接入边界
+
+FloatBalance 首版采用显式授权接入，不自动读取浏览器 Cookie、localStorage 或页面中的完整 API Key。
+
+| 能力 | 接口 | 授权方式 | 首版状态 |
+|---|---|---|---|
+| API Key 余额 | `GET /v1/usage` | `TRUE_SOTA_API_KEY` | 已接入 |
+| 账户总余额 | `GET /api/v1/user/profile` | `TRUE_SOTA_WEB_TOKEN` | 可选接入 |
+| 使用错误列表 | `GET /api/v1/usage/errors` | `TRUE_SOTA_WEB_TOKEN` | 可选接入 |
+| 错误详情 | `GET /api/v1/usage/errors/{id}` | `TRUE_SOTA_WEB_TOKEN` | 文档记录，后续详情面板接入 |
+
+若未配置任何 TrueSOTA 凭证，桌面端显示 `TrueSOTA 配置缺失` ErrorBall，而不是显示伪造余额。
+
 ### 3.3 P2 以后再做
 | 编号 | 能力 | 说明 |
 |---|---|---|

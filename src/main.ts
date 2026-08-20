@@ -11,11 +11,11 @@ import { ErrorStore } from "./error-store";
 import {
   createClientNetworkError,
   loadMockBalances,
-  loadSeedErrors,
 } from "./mock-data";
+import { loadTrueSotaProvider } from "./providers/truesota";
 import type { AppPreferences, BalanceSnapshot, ErrorEvent } from "./types";
 
-const PREF_KEY = "floatbalance.preferences.v1";
+const PREF_KEY = "floatbalance.preferences.v2";
 const CLICK_THROUGH_PREVIEW_MS = 8000;
 
 interface ViewState {
@@ -26,10 +26,11 @@ interface ViewState {
   copiedFingerprint: string | null;
   clickThrough: boolean;
   refreshing: boolean;
+  providerMode: string;
 }
 
 const defaultPreferences: AppPreferences = {
-  collapsed: false,
+  collapsed: true,
   theme: "workbench",
   criticalOnly: false,
 };
@@ -42,6 +43,7 @@ const state: ViewState = {
   copiedFingerprint: null,
   clickThrough: false,
   refreshing: false,
+  providerMode: "demo providers",
 };
 
 function loadPreferences(): AppPreferences {
@@ -73,11 +75,15 @@ function escapeHtml(value: string): string {
 }
 
 function formatCurrency(balance: BalanceSnapshot): string {
-  return new Intl.NumberFormat("zh-CN", {
-    style: "currency",
-    currency: balance.currency,
-    maximumFractionDigits: 2,
-  }).format(balance.amount);
+  try {
+    return new Intl.NumberFormat("zh-CN", {
+      style: "currency",
+      currency: balance.currency,
+      maximumFractionDigits: 2,
+    }).format(balance.amount);
+  } catch {
+    return `${balance.amount.toFixed(2)} ${balance.currency}`;
+  }
 }
 
 function formatClock(value: number): string {
@@ -96,7 +102,13 @@ function relativeTime(value: number): string {
 }
 
 function statusTone(balance: BalanceSnapshot): string {
-  if (balance.cached || balance.status === "offline") return "offline";
+  if (
+    balance.cached ||
+    balance.status === "offline" ||
+    balance.status === "config_missing"
+  ) {
+    return "offline";
+  }
   if (balance.status === "low" || balance.amount <= 10) return "low";
   return "ok";
 }
@@ -236,7 +248,7 @@ function render(): void {
       ${renderDetail(selected)}
 
       <footer class="status-strip" data-tauri-drag-region>
-        <span>mock providers</span>
+        <span>${escapeHtml(state.providerMode)}</span>
         <span>${state.clickThrough ? `click-through ${CLICK_THROUGH_PREVIEW_MS / 1000}s` : `updated ${formatClock(Date.now())}`}</span>
       </footer>
     </main>
@@ -280,8 +292,22 @@ async function handleAction(button: HTMLButtonElement): Promise<void> {
 async function refreshBalances(): Promise<void> {
   state.refreshing = true;
   render();
-  state.balances = await loadMockBalances();
-  state.errorStore.markRecovering("client");
+  const [mockBalances, trueSota] = await Promise.all([
+    loadMockBalances(),
+    loadTrueSotaProvider(),
+  ]);
+
+  state.balances = [...trueSota.balances, ...mockBalances];
+  state.providerMode =
+    trueSota.mode === "live" ? "TrueSOTA live" : "demo + setup needed";
+
+  trueSota.errors.forEach((event) => {
+    state.errorStore.upsert(event);
+  });
+
+  if (trueSota.errors.length === 0 && trueSota.balances.length > 0) {
+    state.errorStore.markRecovering("truesota");
+  }
   state.refreshing = false;
   render();
 }
@@ -372,10 +398,8 @@ function acknowledgeError(fingerprint: string | null): void {
 }
 
 async function init(): Promise<void> {
-  state.balances = await loadMockBalances();
-  state.errorStore = new ErrorStore(await loadSeedErrors());
-  state.selectedFingerprint = state.errorStore.visible(false)[0]?.fingerprint ?? null;
-  render();
+  state.errorStore = new ErrorStore();
+  await refreshBalances();
 }
 
 window.addEventListener("DOMContentLoaded", () => {

@@ -1,4 +1,4 @@
-export type BalanceProviderId = "sub2" | "deepseek";
+export type BalanceProviderId = "sub2" | "deepseek" | "truesota";
 
 export type BalanceStatus = "ok" | "low" | "offline" | "config_missing";
 
@@ -6,7 +6,7 @@ export interface BalanceSnapshot {
   provider: BalanceProviderId;
   label: string;
   amount: number;
-  currency: "CNY" | "USD";
+  currency: string;
   usedToday: number;
   status: BalanceStatus;
   endpoint: string;
@@ -36,6 +36,7 @@ export type ErrorCategory =
 
 export type ErrorSource =
   | "client"
+  | "truesota"
   | "sota2api"
   | "insight"
   | "kiroking"
