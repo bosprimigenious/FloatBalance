@@ -1,0 +1,11 @@
+node_modules/
+dist/
+target/
+.env
+.env.*
+*.local
+*.log
+config.local.json
+secrets.json
+.DS_Store
+Thumbs.db

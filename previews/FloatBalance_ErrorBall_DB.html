@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FloatBalance ErrorBall · DB</title>
+  <style>
+    :root{
+      --bg:#0b1210;
+      --panel:#101915;
+      --ink:#f2fff9;
+      --muted:#b6d1c7;
+      --line:rgba(255,255,255,.12);
+      --accent:#7f1d1d;
+      --accent2:#ffd0d0;
+      --shadow:0 24px 60px rgba(0,0,0,.38);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font:14px/1.45 "Bahnschrift","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 20% 15%, rgba(127,29,29,.20), transparent 28%),
+        radial-gradient(circle at 80% 0%, rgba(255,208,208,.10), transparent 22%),
+        linear-gradient(180deg, #0b1210, #111917 70%, #090f0d);
+    }
+    .shell{max-width:980px;margin:0 auto;padding:28px 24px 36px}
+    .top{
+      display:flex;justify-content:space-between;gap:16px;align-items:flex-end;
+      border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px
+    }
+    h1{margin:0;font-size:28px}
+    .meta{color:var(--muted)}
+    .board{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:18px;
+      align-items:stretch;
+    }
+    .panel{
+      background:rgba(16,25,21,.82);
+      border:1px solid var(--line);
+      border-radius:10px;
+      box-shadow:var(--shadow);
+      padding:18px;
+      backdrop-filter:blur(10px);
+    }
+    .ball-wrap{
+      min-height:360px;
+      display:grid;
+      place-items:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .ball{
+      width:220px;height:220px;border-radius:50%;
+      display:grid;place-items:center;position:relative;
+      background:
+        radial-gradient(circle at 35% 25%, rgba(255,255,255,.32), rgba(255,255,255,.05) 26%, rgba(255,255,255,0) 27%),
+        radial-gradient(circle at 50% 45%, #ffd0d0, #7f1d1d 62%, #260707 100%);
+      box-shadow:0 30px 55px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.18);
+      color:#fff;
+      text-align:center;
+    }
+    .ball::before{
+      content:"";
+      position:absolute;
+      inset:14px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.18);
+    }
+    .ball::after{
+      content:"1";
+      position:absolute;
+      right:-2px;
+      top:-2px;
+      width:34px;height:34px;
+      display:grid;place-items:center;
+      border-radius:999px;
+      background:#fff;
+      color:#7f1d1d;
+      font-weight:800;
+      border:1px solid rgba(127,29,29,.25);
+      box-shadow:0 8px 18px rgba(0,0,0,.2);
+    }
+    .code{font-size:42px;font-weight:800;line-height:1}
+    .sub{margin-top:8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.86}
+    .status-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:center}
+    .chip{
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:#fff;
+      font-size:12px;
+    }
+    .right{display:grid;gap:14px}
+    .card{
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:rgba(255,255,255,.04);
+      padding:16px;
+    }
+    .card h2{margin:0 0 10px;font-size:16px}
+    dl{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;margin:0}
+    dt{color:var(--muted)}
+    dd{margin:0;word-break:break-word}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--ink);
+      border-radius:8px;
+      padding:9px 12px;
+      cursor:pointer;
+      font:inherit;
+    }
+    .note{color:var(--muted);font-size:12px;margin-top:10px}
+    .timeline{display:grid;gap:10px}
+    .item{padding:12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+    .item strong{display:block;margin-bottom:4px}
+    .item small{color:var(--muted);display:block}
+    @media (max-width: 900px){
+      .board{grid-template-columns:1fr}
+      .ball-wrap{min-height:320px}
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="top">
+      <div>
+        <h1>truesota-kiroking · 自动化任务失败 / DB</h1>
+        <div class="meta">FloatBalance ErrorBall 单球页 · 任务失败 / 连接失败 / 严重不可用</div>
+      </div>
+      <div class="meta">severity: critical · category: runtime · count: 1</div>
+    </header>
+
+    <main class="board">
+      <section class="panel ball-wrap">
+        <div class="ball" title="truesota-kiroking 自动化任务失败">
+          <div>
+            <div class="code">DB</div>
+            <div class="sub">runtime</div>
+          </div>
+        </div>
+        <div class="status-row">
+          <span class="chip">source: kiroking</span>
+          <span class="chip">status: active</span>
+          <span class="chip">taskId: job_2418</span>
+          <span class="chip">panic</span>
+        </div>
+      </section>
+
+      <aside class="right">
+        <section class="card">
+          <h2>错误详情</h2>
+          <dl>
+            <dt>source</dt><dd>kiroking</dd>
+            <dt>category</dt><dd>runtime</dd>
+            <dt>severity</dt><dd>critical</dd>
+            <dt>count</dt><dd>1</dd>
+            <dt>taskId</dt><dd>job_2418</dd>
+            <dt>message</dt><dd>database connection failed: timeout while acquiring pool</dd>
+          </dl>
+          <div class="actions">
+            <button>复制脱敏摘要</button>
+            <button>静音 30 分钟</button>
+            <button>打开任务详情</button>
+          </div>
+          <div class="note">这个页面适合展示“核心服务不可用”的深红错误球。</div>
+        </section>
+
+        <section class="card">
+          <h2>恢复建议</h2>
+          <div class="timeline">
+            <div class="item"><strong>首次出现</strong><small>2026-08-20 10:42:07</small></div>
+            <div class="item"><strong>最近一次</strong><small>2026-08-20 10:42:07</small></div>
+            <div class="item"><strong>动作</strong><small>立即升级 / 上报 / 暂停依赖任务</small></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>
