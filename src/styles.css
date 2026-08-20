@@ -36,6 +36,15 @@ button {
   font: inherit;
 }
 
+.drag-surface {
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-surface:active {
+  cursor: grabbing;
+}
+
 .float-shell {
   width: fit-content;
   min-width: 0;
@@ -190,7 +199,7 @@ button {
   box-shadow:
     0 15px 24px rgba(23, 32, 41, 0.24),
     inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  cursor: default;
+  cursor: grab;
 }
 
 .balance-ball.low {

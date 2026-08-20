@@ -18,6 +18,8 @@ import type { AppPreferences, BalanceSnapshot, ErrorEvent } from "./types";
 const PREF_KEY = "floatbalance.preferences.v2";
 const CLICK_THROUGH_PREVIEW_MS = 8000;
 const REFRESH_INTERVAL_MS = 30_000;
+const DRAG_THRESHOLD_PX = 4;
+const DRAG_CLICK_SUPPRESS_MS = 1200;
 
 interface ViewState {
   balances: BalanceSnapshot[];
@@ -50,6 +52,9 @@ const state: ViewState = {
 };
 
 let refreshTimer: number | undefined;
+let dragCandidate: { x: number; y: number } | null = null;
+let dragStartRequested = false;
+let suppressNextClick = false;
 
 function loadPreferences(): AppPreferences {
   try {
@@ -122,7 +127,7 @@ function renderBalanceBalls(): string {
   return state.balances
     .map(
       (balance) => `
-        <button class="balance-ball ${statusTone(balance)}" data-provider="${balance.provider}" title="${escapeHtml(balance.label)} ${escapeHtml(balance.endpoint)}">
+        <button class="balance-ball drag-surface ${statusTone(balance)}" data-provider="${balance.provider}" title="${escapeHtml(balance.label)} ${escapeHtml(balance.endpoint)}">
           <span class="balance-amount">${escapeHtml(formatCurrency(balance))}</span>
           <span class="balance-label">${escapeHtml(balance.label)}</span>
         </button>
@@ -133,14 +138,14 @@ function renderBalanceBalls(): string {
 
 function renderErrorBalls(errors: ErrorEvent[]): string {
   if (errors.length === 0) {
-    return '<span class="empty-signal">OK</span>';
+    return '<span class="empty-signal drag-surface">OK</span>';
   }
 
   return errors
     .map(
       (event) => `
         <button
-          class="error-ball ${event.severity} ${event.status}"
+          class="error-ball drag-surface ${event.severity} ${event.status}"
           data-fingerprint="${event.fingerprint}"
           data-count="${event.count}"
           title="${escapeHtml(`${sourceLabel(event)} ${event.title}`)}"
@@ -267,12 +272,58 @@ function bindEvents(): void {
     button.addEventListener("click", () => handleAction(button));
   });
 
+  document.querySelectorAll<HTMLElement>(".drag-surface").forEach((element) => {
+    element.addEventListener("pointerdown", startDragCandidate);
+    element.addEventListener("pointermove", requestWindowDrag);
+    element.addEventListener("pointerup", clearDragCandidate);
+    element.addEventListener("pointercancel", clearDragCandidate);
+  });
+
   document.querySelectorAll<HTMLButtonElement>(".error-ball").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      if (suppressNextClick) {
+        event.preventDefault();
+        suppressNextClick = false;
+        return;
+      }
       state.selectedFingerprint = button.dataset.fingerprint ?? null;
+      state.preferences.collapsed = false;
+      savePreferences();
       render();
     });
   });
+}
+
+function startDragCandidate(event: PointerEvent): void {
+  if (!isTauriRuntime() || event.button !== 0) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest("[data-no-drag], .window-actions, .detail-actions")) return;
+
+  dragCandidate = { x: event.screenX, y: event.screenY };
+  dragStartRequested = false;
+}
+
+function clearDragCandidate(): void {
+  dragCandidate = null;
+  dragStartRequested = false;
+}
+
+async function requestWindowDrag(event: PointerEvent): Promise<void> {
+  if (!dragCandidate || dragStartRequested || event.buttons !== 1) return;
+
+  const dx = Math.abs(event.screenX - dragCandidate.x);
+  const dy = Math.abs(event.screenY - dragCandidate.y);
+  if (dx < DRAG_THRESHOLD_PX && dy < DRAG_THRESHOLD_PX) return;
+
+  dragStartRequested = true;
+  suppressNextClick = true;
+  event.preventDefault();
+
+  await getCurrentWindow().startDragging().catch(() => undefined);
+  window.setTimeout(() => {
+    clearDragCandidate();
+    suppressNextClick = false;
+  }, DRAG_CLICK_SUPPRESS_MS);
 }
 
 async function handleAction(button: HTMLButtonElement): Promise<void> {
