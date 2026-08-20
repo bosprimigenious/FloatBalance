@@ -107,14 +107,15 @@ fingerprint = sha256(source + category + endpoint + normalized_message)
 
 从 TrueSOTA 前端只读检查得到的接口边界：
 
-- `GET /v1/usage`：API Key 余额探针，可用 `TRUE_SOTA_API_KEY` 调用。
 - `GET /api/v1/user/profile`：账户资料和总余额，需要显式提供 Web Bearer token。
 - `GET /api/v1/usage/errors`：使用错误列表，需要显式提供 Web Bearer token。
 - `GET /api/v1/usage/errors/{id}`：错误详情，需要显式提供 Web Bearer token。
+- `GET /v1/usage`：历史调研记录中的单 API Key 余额探针，不作为 FloatBalance 首版余额球来源。
 
 安全约束：
 
 - 不读取浏览器 Cookie、localStorage、密码管理器或页面完整密钥。
+- token 优先保存到系统凭据；环境变量只作为本机临时覆盖。
 - 不把 token 写入配置文件或 Git。
 - 所有请求失败都先归一化为 `ErrorEvent`，再进入 `ErrorStore`。
 
@@ -342,7 +343,7 @@ trace_id: req_xxx
 | 用例 | 操作 | 预期 |
 |---|---|---|
 | 网络超时 | 断网后刷新余额 | 5 秒内出现 network/error 错误球 |
-| 鉴权失败 | 使用无效 API Key | 出现 auth/error，摘要不暴露 key |
+| 鉴权失败 | 使用无效 token | 出现 auth/error，摘要不暴露 key |
 | 高频重复 | 连续触发同一 502 | 只出现 1 个错误球，count 增加 |
 | 恢复 | 服务恢复并连续成功 | 错误球变为 recovering，随后隐藏 |
 | 静音 | 对某错误静音 30 分钟 | 期间不再强提示，仅详情列表可见 |

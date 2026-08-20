@@ -31,7 +31,7 @@ def main() -> None:
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 452, "height": 292})
+        page = browser.new_page(viewport={"width": 452, "height": 420})
         page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
         page.on("pageerror", lambda error: page_errors.append(str(error)))
 
@@ -70,6 +70,10 @@ def main() -> None:
 
         page.get_by_label("折叠").click()
         assert page.locator(".metric").count() >= 2
+
+        page.get_by_label("连接 TrueSOTA").click()
+        assert page.locator(".settings-panel").is_visible()
+        assert page.locator("[data-credential='web-token']").is_visible()
 
         page.screenshot(path=str(SCREENSHOT), full_page=True)
         browser.close()

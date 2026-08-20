@@ -20,23 +20,20 @@ npm run build
 npm run tauri dev
 ```
 
-接入 TrueSOTA API Key 余额：
+接入 TrueSOTA 账户级余额与错误列表：
 
-```powershell
-$env:TRUE_SOTA_API_KEY="你的 TrueSOTA API Key"
-npm run tauri dev
-```
+推荐在桌面端点击齿轮按钮打开“连接 TrueSOTA”，粘贴你显式授权的 Web Bearer token，或后续 TrueSOTA 提供的只读监控 token。FloatBalance 会把 token 存入本机系统凭据，不会回填显示，也不会写入仓库。
 
-可选接入网页登录态的账户余额与错误记录：
+也可以临时用环境变量覆盖：
 
 ```powershell
 $env:TRUE_SOTA_WEB_TOKEN="你显式提供的 TrueSOTA Web Bearer token"
 npm run tauri dev
 ```
 
-`TRUE_SOTA_WEB_TOKEN` 不会写入仓库；默认也不会读取浏览器 Cookie 或 localStorage。
+`TRUE_SOTA_WEB_TOKEN` 不会写入仓库；默认也不会读取浏览器 Cookie、localStorage 或任何浏览器登录态。
 
-桌面端不会显示静态 demo 余额。未设置真实凭证时只显示配置类 ErrorBall；设置 `TRUE_SOTA_API_KEY` 或 `TRUE_SOTA_WEB_TOKEN` 后，每 30 秒自动刷新一次。
+桌面端不会显示静态 demo 余额。未设置账户级 token 时只显示配置类 ErrorBall；设置后每 30 秒自动刷新账户总余额和错误列表。
 
 Windows 安装包构建：
 

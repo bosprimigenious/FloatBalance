@@ -8,21 +8,12 @@ import type {
 } from "../types";
 
 const DEFAULT_BASE_URL = "https://true-sota.com";
-const API_USAGE_ENDPOINT = "/v1/usage";
 const WEB_PROFILE_ENDPOINT = "/api/v1/user/profile";
 const WEB_ERRORS_ENDPOINT = "/api/v1/usage/errors";
 
-interface TrueSotaConfigStatus {
-  apiKeyConfigured: boolean;
+export interface TrueSotaConfigStatus {
   webTokenConfigured: boolean;
-}
-
-interface TrueSotaUsageResponse {
-  amount: number;
-  currency: string;
-  unit: string;
-  isActive: boolean;
-  endpoint: string;
+  webTokenSource?: "env" | "credential";
 }
 
 export interface TrueSotaLoadResult {
@@ -226,22 +217,24 @@ async function loadConfigStatus(): Promise<TrueSotaConfigStatus> {
   return invoke<TrueSotaConfigStatus>("truesota_config_status");
 }
 
-async function loadApiKeyBalance(now: number): Promise<BalanceSnapshot> {
-  const usage = await invoke<TrueSotaUsageResponse>("fetch_truesota_usage", {
-    request: { baseUrl: DEFAULT_BASE_URL },
-  });
+export async function loadTrueSotaConfigStatus(): Promise<TrueSotaConfigStatus> {
+  if (!isTauriRuntime()) {
+    return { webTokenConfigured: false };
+  }
 
-  return {
-    provider: "truesota",
-    label: "TrueSOTA Key",
-    amount: usage.amount,
-    currency: usage.currency || usage.unit || "USD",
-    usedToday: 0,
-    status: usage.isActive ? "ok" : "offline",
-    endpoint: usage.endpoint || API_USAGE_ENDPOINT,
-    updatedAt: now,
-    cached: false,
-  };
+  return loadConfigStatus();
+}
+
+export async function saveTrueSotaAccountToken(
+  webToken: string,
+): Promise<TrueSotaConfigStatus> {
+  return invoke<TrueSotaConfigStatus>("save_truesota_credentials", {
+    request: { webToken },
+  });
+}
+
+export async function clearTrueSotaAccountToken(): Promise<TrueSotaConfigStatus> {
+  return invoke<TrueSotaConfigStatus>("clear_truesota_credentials");
 }
 
 async function loadAccountBalance(now: number): Promise<BalanceSnapshot | null> {
@@ -295,7 +288,7 @@ export async function loadTrueSotaProvider(): Promise<TrueSotaLoadResult> {
     errors.push(
       await createProviderError(
         "Tauri desktop runtime is unavailable; TrueSOTA live adapters run only inside the desktop app.",
-        API_USAGE_ENDPOINT,
+        WEB_PROFILE_ENDPOINT,
         "使用 npm run tauri dev 或安装 Windows 桌面包运行。",
       ),
     );
@@ -309,19 +302,19 @@ export async function loadTrueSotaProvider(): Promise<TrueSotaLoadResult> {
     errors.push(
       await createProviderError(
         String(error),
-        API_USAGE_ENDPOINT,
+        WEB_PROFILE_ENDPOINT,
         "检查 Tauri command 注册是否正常。",
       ),
     );
     return { balances, errors, mode: "partial" };
   }
 
-  if (!config.apiKeyConfigured && !config.webTokenConfigured) {
+  if (!config.webTokenConfigured) {
     errors.push(
       await createProviderError(
-        "TRUE_SOTA_API_KEY is not set. TRUE_SOTA_WEB_TOKEN is also not set.",
-        API_USAGE_ENDPOINT,
-        "在 PowerShell 中设置 TRUE_SOTA_API_KEY 后重新运行桌面端。",
+        "TrueSOTA account token is not configured.",
+        WEB_PROFILE_ENDPOINT,
+        "打开连接面板，保存你显式授权的 TrueSOTA 账户级 token 或只读监控 token。",
       ),
     );
     return { balances, errors, mode: "demo" };
@@ -336,7 +329,7 @@ export async function loadTrueSotaProvider(): Promise<TrueSotaLoadResult> {
         await createProviderError(
           String(error),
           WEB_PROFILE_ENDPOINT,
-          "确认 TRUE_SOTA_WEB_TOKEN 是否仍有效；不要把网页登录 token 提交进仓库。",
+          "确认 TrueSOTA 账户 token 是否仍有效；不要把网页登录 token 提交进仓库。",
         ),
       );
     }
@@ -349,20 +342,6 @@ export async function loadTrueSotaProvider(): Promise<TrueSotaLoadResult> {
           String(error),
           WEB_ERRORS_ENDPOINT,
           "确认 TrueSOTA 账号是否允许访问使用错误记录。",
-        ),
-      );
-    }
-  }
-
-  if (config.apiKeyConfigured) {
-    try {
-      balances.push(await loadApiKeyBalance(now));
-    } catch (error) {
-      errors.push(
-        await createProviderError(
-          String(error),
-          API_USAGE_ENDPOINT,
-          "确认 TRUE_SOTA_API_KEY 是否可用，或在 TrueSOTA API 密钥页重新生成。",
         ),
       );
     }

@@ -36,6 +36,15 @@ button {
   font: inherit;
 }
 
+input {
+  font: inherit;
+}
+
+input,
+label {
+  user-select: text;
+}
+
 .drag-surface {
   cursor: grab;
   touch-action: none;
@@ -345,6 +354,116 @@ button {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.settings-panel {
+  width: min(432px, calc(100vw - 16px));
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(23, 32, 41, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 24px rgba(23, 32, 41, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.settings-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-title strong,
+.settings-title span,
+.token-field span,
+.settings-message {
+  display: block;
+}
+
+.settings-title strong {
+  font-size: 13px;
+}
+
+.settings-title span,
+.token-field span,
+.settings-message {
+  color: #67727d;
+  font-size: 11px;
+}
+
+.connection-pill {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid rgba(23, 32, 41, 0.1);
+  border-radius: 999px;
+  color: #5d6872;
+  background: rgba(255, 255, 255, 0.66);
+  font-weight: 700;
+}
+
+.connection-pill.connected {
+  color: #12634f;
+  border-color: rgba(27, 138, 107, 0.18);
+  background: rgba(221, 245, 237, 0.76);
+}
+
+.connection-pill.missing {
+  color: #8b6519;
+  border-color: rgba(195, 122, 0, 0.18);
+  background: rgba(255, 244, 219, 0.76);
+}
+
+.token-field {
+  display: grid;
+  gap: 5px;
+}
+
+.token-field input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(23, 32, 41, 0.14);
+  border-radius: 8px;
+  color: #172029;
+  background: rgba(255, 255, 255, 0.86);
+  outline: none;
+}
+
+.token-field input:focus {
+  border-color: rgba(27, 138, 107, 0.5);
+  box-shadow: 0 0 0 3px rgba(27, 138, 107, 0.1);
+}
+
+.settings-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-actions button {
+  min-width: 96px;
+  height: 28px;
+  border: 1px solid rgba(23, 32, 41, 0.14);
+  border-radius: 8px;
+  color: #172029;
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.settings-actions button:hover:not(:disabled) {
+  border-color: rgba(27, 138, 107, 0.42);
+  background: #eef8f4;
+}
+
+.settings-actions button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.settings-message {
+  margin: 0;
+}
+
 .detail-title {
   display: flex;
   align-items: flex-start;
@@ -481,7 +600,11 @@ body[data-theme="night"] .brand,
 body[data-theme="night"] .window-actions,
 body[data-theme="night"] .metric,
 body[data-theme="night"] .detail-drawer,
+body[data-theme="night"] .settings-panel,
 body[data-theme="night"] .detail-actions button,
+body[data-theme="night"] .settings-actions button,
+body[data-theme="night"] .token-field input,
+body[data-theme="night"] .connection-pill,
 body[data-theme="night"] .empty-signal,
 body[data-theme="night"] .status-strip {
   color: #eef4f1;
@@ -491,6 +614,12 @@ body[data-theme="night"] .status-strip {
 
 body[data-theme="night"] .message {
   color: #d7dfda;
+}
+
+body[data-theme="night"] .settings-title span,
+body[data-theme="night"] .token-field span,
+body[data-theme="night"] .settings-message {
+  color: #9aa7b1;
 }
 
 @keyframes criticalPulse {

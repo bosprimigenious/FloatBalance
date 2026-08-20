@@ -56,16 +56,15 @@ FloatBalance 是一个跨平台桌面悬浮球工具，面向需要频繁查看 
 
 ### 3.2.1 TrueSOTA 真实接入边界
 
-FloatBalance 首版采用显式授权接入，不自动读取浏览器 Cookie、localStorage 或页面中的完整 API Key。
+FloatBalance 首版采用显式授权接入，不自动读取浏览器 Cookie、localStorage 或页面中的完整 API Key。余额口径以账户总余额为准，不用某一把 API Key 的剩余额度代替整个平台余额。
 
 | 能力 | 接口 | 授权方式 | 首版状态 |
 |---|---|---|---|
-| API Key 余额 | `GET /v1/usage` | `TRUE_SOTA_API_KEY` | 已接入 |
-| 账户总余额 | `GET /api/v1/user/profile` | `TRUE_SOTA_WEB_TOKEN` | 可选接入 |
-| 使用错误列表 | `GET /api/v1/usage/errors` | `TRUE_SOTA_WEB_TOKEN` | 可选接入 |
-| 错误详情 | `GET /api/v1/usage/errors/{id}` | `TRUE_SOTA_WEB_TOKEN` | 文档记录，后续详情面板接入 |
+| 账户总余额 | `GET /api/v1/user/profile` | 系统凭据中的账户级 Web token，或 `TRUE_SOTA_WEB_TOKEN` 临时覆盖 | 已接入 |
+| 使用错误列表 | `GET /api/v1/usage/errors` | 同上 | 已接入 |
+| 错误详情 | `GET /api/v1/usage/errors/{id}` | 同上 | 文档记录，后续详情面板接入 |
 
-若未配置任何 TrueSOTA 凭证，桌面端显示 `TrueSOTA 配置缺失` ErrorBall，而不是显示伪造余额。
+`GET /v1/usage` 只作为历史调研中的单 Key 探针记录，不作为首版余额球来源。若未配置 TrueSOTA 账户级 token，桌面端显示 `TrueSOTA 配置缺失` ErrorBall，而不是显示伪造余额。
 
 ### 3.3 P2 以后再做
 | 编号 | 能力 | 说明 |
@@ -543,7 +542,7 @@ FloatBalance 首版采用显式授权接入，不自动读取浏览器 Cookie、
           </div>
           <div class="metric">
             <div class="k"><span>Top Risk</span><span>密钥存储</span></div>
-            <div class="s">API Key 不能明文落盘，只存引用和必要配置。</div>
+            <div class="s">账户 token 不明文落盘，只存系统凭据状态。</div>
           </div>
           <div class="metric">
             <div class="k"><span>Milestone</span><span>建议顺序</span></div>

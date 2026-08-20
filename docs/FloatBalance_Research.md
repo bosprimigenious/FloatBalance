@@ -95,10 +95,10 @@ test-results/floatbalance-visual-check.png
 | 风险 | 当前状态 | 下一步 |
 |---|---|---|
 | 真实 Sub2 / DeepSeek 接口字段 | 未接入 | 增加 BalanceProvider adapter |
-| TrueSOTA API Key 余额 | 已接入 | `TRUE_SOTA_API_KEY` + `GET /v1/usage` |
-| TrueSOTA Web 账户余额 | 可选接入 | `TRUE_SOTA_WEB_TOKEN` + `GET /api/v1/user/profile` |
-| TrueSOTA Web 错误列表 | 可选接入 | `TRUE_SOTA_WEB_TOKEN` + `GET /api/v1/usage/errors` |
-| 密钥存储 | 未接入 | 接入系统 keyring 插件或 Rust 安全存储 |
+| TrueSOTA API Key 余额 | 不作为首版余额来源 | `GET /v1/usage` 只能代表单 Key |
+| TrueSOTA Web 账户余额 | 已接入 | 系统凭据账户 token 或 `TRUE_SOTA_WEB_TOKEN` + `GET /api/v1/user/profile` |
+| TrueSOTA Web 错误列表 | 已接入 | 系统凭据账户 token 或 `TRUE_SOTA_WEB_TOKEN` + `GET /api/v1/usage/errors` |
+| 密钥存储 | 已接入 | Rust `keyring` 写入系统凭据，前端只显示配置状态 |
 | 点击穿透跨平台表现 | Windows build 已编译，未人工交互验收 | 启动 Tauri dev 进行桌面实测 |
 | 自动更新/签名 | 未接入 | M5 处理 |
 
@@ -118,7 +118,7 @@ test-results/floatbalance-visual-check.png
 只读结果：
 
 - 页面可见账户余额：已验证。出于公开仓库安全，不提交具体金额。
-- API Key 使用脚本指向：`GET /v1/usage`
+- API Key 使用脚本指向：`GET /v1/usage`，但它只代表单 Key，不适合作为平台总余额。
 - 前端 Web API 基础路径：`/api/v1`
 - 账户资料：`GET /api/v1/user/profile`
 - 使用错误列表：`GET /api/v1/usage/errors`
@@ -126,7 +126,7 @@ test-results/floatbalance-visual-check.png
 安全判断：
 
 - 浏览器登录 token 存在于前端认证流程中，但本项目不读取该值。
-- 桌面端只从本地环境变量读取用户显式提供的 `TRUE_SOTA_API_KEY` 或 `TRUE_SOTA_WEB_TOKEN`。
-- 当前机器未检测到 `TRUE_SOTA_API_KEY`，因此直接运行会显示配置缺失 ErrorBall。
+- 桌面端从系统凭据读取用户显式保存的账户级 Web token；`TRUE_SOTA_WEB_TOKEN` 只作为临时环境变量覆盖。
+- 当前机器未保存账户级 token 时，直接运行会显示配置缺失 ErrorBall。
 - 桌面端不显示静态 demo 余额；只有浏览器预览环境保留 Sub2 / DeepSeek demo 数据。
 - 真实接入后每 30 秒自动轮询刷新。

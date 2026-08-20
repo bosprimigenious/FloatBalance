@@ -12,7 +12,13 @@ import {
   createClientNetworkError,
   loadMockBalances,
 } from "./mock-data";
-import { loadTrueSotaProvider } from "./providers/truesota";
+import {
+  clearTrueSotaAccountToken,
+  loadTrueSotaConfigStatus,
+  loadTrueSotaProvider,
+  saveTrueSotaAccountToken,
+  type TrueSotaConfigStatus,
+} from "./providers/truesota";
 import type { AppPreferences, BalanceSnapshot, ErrorEvent } from "./types";
 
 const PREF_KEY = "floatbalance.preferences.v2";
@@ -31,6 +37,10 @@ interface ViewState {
   refreshing: boolean;
   providerMode: string;
   lastSyncedAt: number | null;
+  settingsOpen: boolean;
+  savingCredentials: boolean;
+  settingsMessage: string | null;
+  trueSotaConfig: TrueSotaConfigStatus | null;
 }
 
 const defaultPreferences: AppPreferences = {
@@ -49,6 +59,10 @@ const state: ViewState = {
   refreshing: false,
   providerMode: "demo providers",
   lastSyncedAt: null,
+  settingsOpen: false,
+  savingCredentials: false,
+  settingsMessage: null,
+  trueSotaConfig: null,
 };
 
 let refreshTimer: number | undefined;
@@ -208,6 +222,39 @@ function renderMetrics(): string {
   `;
 }
 
+function renderTrueSotaSettings(): string {
+  if (!state.settingsOpen || state.preferences.collapsed) return "";
+
+  const status = state.trueSotaConfig;
+  const statusLabel = status?.webTokenConfigured
+    ? status.webTokenSource === "env"
+      ? "环境变量已配置"
+      : "系统凭据已保存"
+    : "未连接";
+  const buttonDisabled = state.savingCredentials ? "disabled" : "";
+
+  return `
+    <section class="settings-panel" data-no-drag aria-label="连接 TrueSOTA">
+      <div class="settings-title">
+        <div>
+          <strong>连接 TrueSOTA</strong>
+          <span>账户级余额与错误列表</span>
+        </div>
+        <span class="connection-pill ${status?.webTokenConfigured ? "connected" : "missing"}">${escapeHtml(statusLabel)}</span>
+      </div>
+      <label class="token-field">
+        <span>Web / 只读监控 Token</span>
+        <input data-credential="web-token" type="password" autocomplete="off" spellcheck="false" placeholder="Bearer token，只保存在本机系统凭据" />
+      </label>
+      <div class="settings-actions">
+        <button data-action="save-truesota" ${buttonDisabled}>保存并刷新</button>
+        <button data-action="clear-truesota" ${buttonDisabled}>清除本机凭据</button>
+      </div>
+      ${state.settingsMessage ? `<p class="settings-message">${escapeHtml(state.settingsMessage)}</p>` : ""}
+    </section>
+  `;
+}
+
 function render(): void {
   const root = document.querySelector<HTMLDivElement>("#app");
   if (!root) return;
@@ -236,6 +283,7 @@ function render(): void {
         </div>
         <nav class="window-actions" aria-label="窗口操作">
           <button class="icon-button" data-action="refresh" title="刷新余额" aria-label="刷新余额">↻</button>
+          <button class="icon-button" data-action="toggle-settings" title="连接 TrueSOTA" aria-label="连接 TrueSOTA">⚙</button>
           <button class="icon-button" data-action="simulate-error" title="模拟网络错误" aria-label="模拟网络错误">!</button>
           <button class="icon-button" data-action="toggle-critical" title="仅严重错误" aria-label="仅严重错误">${state.preferences.criticalOnly ? "C" : "A"}</button>
           <button class="icon-button" data-action="toggle-theme" title="切换主题" aria-label="切换主题">◐</button>
@@ -254,6 +302,7 @@ function render(): void {
         </div>
       </section>
 
+      ${renderTrueSotaSettings()}
       ${renderMetrics()}
       ${renderDetail(selected)}
 
@@ -330,6 +379,9 @@ async function handleAction(button: HTMLButtonElement): Promise<void> {
   const action = button.dataset.action;
 
   if (action === "refresh") await refreshBalances();
+  if (action === "toggle-settings") await toggleSettings();
+  if (action === "save-truesota") await saveTrueSotaConnection();
+  if (action === "clear-truesota") await clearTrueSotaConnection();
   if (action === "simulate-error") await simulateClientError();
   if (action === "toggle-critical") toggleCriticalOnly();
   if (action === "toggle-theme") toggleTheme();
@@ -350,6 +402,7 @@ async function refreshBalances(): Promise<void> {
 
   state.refreshing = true;
   render();
+  await refreshTrueSotaConfig();
   const [mockBalances, trueSota] = await Promise.all([
     loadMockBalances(),
     loadTrueSotaProvider(),
@@ -376,6 +429,73 @@ async function refreshBalances(): Promise<void> {
   }
   state.refreshing = false;
   render();
+}
+
+async function refreshTrueSotaConfig(): Promise<void> {
+  if (!isTauriRuntime()) {
+    state.trueSotaConfig = { webTokenConfigured: false };
+    return;
+  }
+
+  try {
+    state.trueSotaConfig = await loadTrueSotaConfigStatus();
+  } catch (error) {
+    state.trueSotaConfig = { webTokenConfigured: false };
+    state.settingsMessage = `连接状态读取失败：${String(error)}`;
+  }
+}
+
+async function toggleSettings(): Promise<void> {
+  state.settingsOpen = !state.settingsOpen;
+  if (state.settingsOpen) {
+    state.preferences.collapsed = false;
+    savePreferences();
+    await refreshTrueSotaConfig();
+  }
+  render();
+}
+
+async function saveTrueSotaConnection(): Promise<void> {
+  const input = document.querySelector<HTMLInputElement>("[data-credential='web-token']");
+  const webToken = input?.value.trim() ?? "";
+
+  if (!webToken) {
+    state.settingsMessage = "请先粘贴账户级 Web token，或 TrueSOTA 后续提供的只读监控 token。";
+    render();
+    return;
+  }
+
+  state.savingCredentials = true;
+  state.settingsMessage = "正在保存到系统凭据...";
+  render();
+
+  try {
+    state.trueSotaConfig = await saveTrueSotaAccountToken(webToken);
+    state.settingsMessage = "已保存，本机不会从浏览器读取登录态。";
+    await refreshBalances();
+  } catch (error) {
+    state.settingsMessage = `保存失败：${String(error)}`;
+  } finally {
+    state.savingCredentials = false;
+    render();
+  }
+}
+
+async function clearTrueSotaConnection(): Promise<void> {
+  state.savingCredentials = true;
+  state.settingsMessage = "正在清除本机凭据...";
+  render();
+
+  try {
+    state.trueSotaConfig = await clearTrueSotaAccountToken();
+    state.settingsMessage = "已清除本机保存的 TrueSOTA token。";
+    await refreshBalances();
+  } catch (error) {
+    state.settingsMessage = `清除失败：${String(error)}`;
+  } finally {
+    state.savingCredentials = false;
+    render();
+  }
 }
 
 async function simulateClientError(): Promise<void> {

@@ -1,3 +1,4 @@
+use keyring::Entry;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{env, time::Duration};
@@ -8,6 +9,8 @@ use tauri::{
 };
 
 const TRUE_SOTA_DEFAULT_BASE_URL: &str = "https://true-sota.com";
+const TRUE_SOTA_CREDENTIAL_SERVICE: &str = "FloatBalance.TrueSOTA";
+const TRUE_SOTA_WEB_TOKEN_ACCOUNT: &str = "account_web_token";
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,28 +18,50 @@ struct TrueSotaRequest {
     base_url: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct TrueSotaConfigStatus {
-    api_key_configured: bool,
-    web_token_configured: bool,
+struct TrueSotaCredentialSaveRequest {
+    web_token: String,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct TrueSotaUsageResponse {
-    amount: f64,
-    currency: String,
-    unit: String,
-    is_active: bool,
-    endpoint: String,
-    http_status: u16,
+struct TrueSotaConfigStatus {
+    web_token_configured: bool,
+    web_token_source: Option<String>,
 }
 
 fn non_empty_env(names: &[&str]) -> Option<String> {
     names
         .iter()
         .find_map(|name| env::var(name).ok().filter(|value| !value.trim().is_empty()))
+}
+
+fn credential_entry(account: &str) -> Result<Entry, String> {
+    Entry::new(TRUE_SOTA_CREDENTIAL_SERVICE, account)
+        .map_err(|error| format!("failed to open system credential store: {error}"))
+}
+
+fn read_stored_credential(account: &str) -> Option<String> {
+    credential_entry(account)
+        .ok()
+        .and_then(|entry| entry.get_password().ok())
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn configured_web_token_source() -> Option<String> {
+    if non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"]).is_some() {
+        return Some("env".to_string());
+    }
+    if read_stored_credential(TRUE_SOTA_WEB_TOKEN_ACCOUNT).is_some() {
+        return Some("credential".to_string());
+    }
+    None
+}
+
+fn true_sota_web_token() -> Option<String> {
+    non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"])
+        .or_else(|| read_stored_credential(TRUE_SOTA_WEB_TOKEN_ACCOUNT))
 }
 
 fn true_sota_base_url(request: TrueSotaRequest) -> String {
@@ -54,37 +79,6 @@ fn true_sota_http_client() -> Result<reqwest::Client, String> {
         .user_agent("FloatBalance/0.1.0")
         .build()
         .map_err(|error| format!("failed to build TrueSOTA HTTP client: {error}"))
-}
-
-fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
-    path.iter().try_fold(value, |current, key| current.get(key))
-}
-
-fn value_as_f64(value: &Value) -> Option<f64> {
-    match value {
-        Value::Number(number) => number.as_f64(),
-        Value::String(text) => text.replace(['$', ',', ' '], "").parse::<f64>().ok(),
-        _ => None,
-    }
-}
-
-fn pick_f64(value: &Value, paths: &[&[&str]]) -> Option<f64> {
-    paths
-        .iter()
-        .find_map(|path| value_at(value, path).and_then(value_as_f64))
-}
-
-fn pick_string(value: &Value, paths: &[&[&str]]) -> Option<String> {
-    paths
-        .iter()
-        .find_map(|path| value_at(value, path).and_then(Value::as_str))
-        .map(str::to_string)
-}
-
-fn pick_bool(value: &Value, paths: &[&[&str]]) -> Option<bool> {
-    paths
-        .iter()
-        .find_map(|path| value_at(value, path).and_then(Value::as_bool))
 }
 
 async fn get_json_bearer(url: &str, bearer: &str) -> Result<(u16, Value), String> {
@@ -114,68 +108,44 @@ async fn get_json_bearer(url: &str, bearer: &str) -> Result<(u16, Value), String
 
 #[tauri::command]
 fn truesota_config_status() -> TrueSotaConfigStatus {
+    let web_token_source = configured_web_token_source();
     TrueSotaConfigStatus {
-        api_key_configured: non_empty_env(&["TRUE_SOTA_API_KEY"]).is_some(),
-        web_token_configured: non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"])
-            .is_some(),
+        web_token_configured: web_token_source.is_some(),
+        web_token_source,
     }
 }
 
 #[tauri::command]
-async fn fetch_truesota_usage(request: TrueSotaRequest) -> Result<TrueSotaUsageResponse, String> {
-    let api_key = non_empty_env(&["TRUE_SOTA_API_KEY"])
-        .ok_or_else(|| "TRUE_SOTA_API_KEY is not set".to_string())?;
-    let base_url = true_sota_base_url(request);
-    let endpoint = "/v1/usage";
-    let url = format!("{base_url}{endpoint}");
-    let (http_status, json) = get_json_bearer(&url, &api_key).await?;
+fn save_truesota_credentials(
+    request: TrueSotaCredentialSaveRequest,
+) -> Result<TrueSotaConfigStatus, String> {
+    let web_token = request.web_token.trim();
+    if web_token.is_empty() {
+        return Err("TrueSOTA account token is empty".to_string());
+    }
 
-    let amount = pick_f64(
-        &json,
-        &[
-            &["remaining"],
-            &["quota", "remaining"],
-            &["balance"],
-            &["data", "remaining"],
-            &["data", "quota", "remaining"],
-            &["data", "balance"],
-        ],
-    )
-    .ok_or_else(|| {
-        "TrueSOTA /v1/usage did not include remaining, quota.remaining, or balance".to_string()
-    })?;
-    let unit = pick_string(
-        &json,
-        &[
-            &["unit"],
-            &["quota", "unit"],
-            &["currency"],
-            &["data", "unit"],
-            &["data", "quota", "unit"],
-            &["data", "currency"],
-        ],
-    )
-    .unwrap_or_else(|| "USD".to_string());
-    let is_active = pick_bool(
-        &json,
-        &[&["is_active"], &["isValid"], &["data", "is_active"]],
-    )
-    .unwrap_or(true);
+    credential_entry(TRUE_SOTA_WEB_TOKEN_ACCOUNT)?
+        .set_password(web_token)
+        .map_err(|error| {
+            format!("failed to save TrueSOTA token to system credential store: {error}")
+        })?;
 
-    Ok(TrueSotaUsageResponse {
-        amount,
-        currency: unit.to_uppercase(),
-        unit,
-        is_active,
-        endpoint: endpoint.to_string(),
-        http_status,
-    })
+    Ok(truesota_config_status())
+}
+
+#[tauri::command]
+fn clear_truesota_credentials() -> Result<TrueSotaConfigStatus, String> {
+    if let Ok(entry) = credential_entry(TRUE_SOTA_WEB_TOKEN_ACCOUNT) {
+        let _ = entry.delete_credential();
+    }
+
+    Ok(truesota_config_status())
 }
 
 #[tauri::command]
 async fn fetch_truesota_web_profile(request: TrueSotaRequest) -> Result<Value, String> {
-    let token = non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"])
-        .ok_or_else(|| "TRUE_SOTA_WEB_TOKEN is not set".to_string())?;
+    let token = true_sota_web_token()
+        .ok_or_else(|| "TrueSOTA account token is not configured".to_string())?;
     let base_url = true_sota_base_url(request);
     get_json_bearer(&format!("{base_url}/api/v1/user/profile"), &token)
         .await
@@ -184,8 +154,8 @@ async fn fetch_truesota_web_profile(request: TrueSotaRequest) -> Result<Value, S
 
 #[tauri::command]
 async fn fetch_truesota_web_errors(request: TrueSotaRequest) -> Result<Value, String> {
-    let token = non_empty_env(&["TRUE_SOTA_WEB_TOKEN", "TRUE_SOTA_WEB_BEARER_TOKEN"])
-        .ok_or_else(|| "TRUE_SOTA_WEB_TOKEN is not set".to_string())?;
+    let token = true_sota_web_token()
+        .ok_or_else(|| "TrueSOTA account token is not configured".to_string())?;
     let base_url = true_sota_base_url(request);
     get_json_bearer(
         &format!("{base_url}/api/v1/usage/errors?page=1&page_size=20"),
@@ -268,7 +238,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_click_through,
             truesota_config_status,
-            fetch_truesota_usage,
+            save_truesota_credentials,
+            clear_truesota_credentials,
             fetch_truesota_web_profile,
             fetch_truesota_web_errors
         ])

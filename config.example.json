@@ -1,17 +1,12 @@
 {
   "trueSota": {
     "baseUrl": "https://true-sota.com",
-    "balanceProbe": {
-      "env": "TRUE_SOTA_API_KEY",
-      "endpoint": "/v1/usage",
-      "auth": "Authorization: Bearer <api-key>"
-    },
-    "webAccountProbe": {
+    "accountProbe": {
       "env": "TRUE_SOTA_WEB_TOKEN",
       "profileEndpoint": "/api/v1/user/profile",
       "errorsEndpoint": "/api/v1/usage/errors?page=1&page_size=20",
-      "auth": "Authorization: Bearer <explicit-user-token>",
-      "note": "Optional. Do not commit this token; it is only read from the local environment."
+      "auth": "Authorization: Bearer <explicit-account-or-monitor-token>",
+      "note": "Prefer the in-app connection panel. The token is saved to the OS credential store; this env var is only a local override."
     }
   }
 }
