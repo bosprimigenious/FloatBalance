@@ -17,6 +17,7 @@ import type { AppPreferences, BalanceSnapshot, ErrorEvent } from "./types";
 
 const PREF_KEY = "floatbalance.preferences.v2";
 const CLICK_THROUGH_PREVIEW_MS = 8000;
+const REFRESH_INTERVAL_MS = 30_000;
 
 interface ViewState {
   balances: BalanceSnapshot[];
@@ -27,6 +28,7 @@ interface ViewState {
   clickThrough: boolean;
   refreshing: boolean;
   providerMode: string;
+  lastSyncedAt: number | null;
 }
 
 const defaultPreferences: AppPreferences = {
@@ -44,7 +46,10 @@ const state: ViewState = {
   clickThrough: false,
   refreshing: false,
   providerMode: "demo providers",
+  lastSyncedAt: null,
 };
+
+let refreshTimer: number | undefined;
 
 function loadPreferences(): AppPreferences {
   try {
@@ -221,7 +226,7 @@ function render(): void {
           <span class="brand-mark">FB</span>
           <span class="brand-copy">
             <strong>FloatBalance</strong>
-            <small>${totalActive} signals · ${state.refreshing ? "syncing" : "ready"}</small>
+            <small>${totalActive} signals · ${state.refreshing ? "syncing" : state.providerMode}</small>
           </span>
         </div>
         <nav class="window-actions" aria-label="窗口操作">
@@ -249,7 +254,7 @@ function render(): void {
 
       <footer class="status-strip" data-tauri-drag-region>
         <span>${escapeHtml(state.providerMode)}</span>
-        <span>${state.clickThrough ? `click-through ${CLICK_THROUGH_PREVIEW_MS / 1000}s` : `updated ${formatClock(Date.now())}`}</span>
+        <span>${state.clickThrough ? `click-through ${CLICK_THROUGH_PREVIEW_MS / 1000}s` : state.lastSyncedAt ? `updated ${formatClock(state.lastSyncedAt)}` : "not synced"}</span>
       </footer>
     </main>
   `;
@@ -290,16 +295,26 @@ async function handleAction(button: HTMLButtonElement): Promise<void> {
 }
 
 async function refreshBalances(): Promise<void> {
+  if (state.refreshing) return;
+
   state.refreshing = true;
   render();
   const [mockBalances, trueSota] = await Promise.all([
     loadMockBalances(),
     loadTrueSotaProvider(),
   ]);
+  const allowDemoBalances = !isTauriRuntime();
 
-  state.balances = [...trueSota.balances, ...mockBalances];
-  state.providerMode =
-    trueSota.mode === "live" ? "TrueSOTA live" : "demo + setup needed";
+  state.balances = [
+    ...trueSota.balances,
+    ...(allowDemoBalances ? mockBalances : []),
+  ];
+  state.providerMode = trueSota.mode === "live"
+    ? "TrueSOTA live"
+    : allowDemoBalances
+      ? "preview demo"
+      : "setup needed";
+  state.lastSyncedAt = Date.now();
 
   trueSota.errors.forEach((event) => {
     state.errorStore.upsert(event);
@@ -400,8 +415,15 @@ function acknowledgeError(fingerprint: string | null): void {
 async function init(): Promise<void> {
   state.errorStore = new ErrorStore();
   await refreshBalances();
+  refreshTimer = window.setInterval(() => {
+    refreshBalances().catch((error) => console.error(error));
+  }, REFRESH_INTERVAL_MS);
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   init().catch((error) => console.error(error));
+});
+
+window.addEventListener("beforeunload", () => {
+  if (refreshTimer !== undefined) window.clearInterval(refreshTimer);
 });

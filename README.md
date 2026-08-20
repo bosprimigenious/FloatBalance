@@ -36,6 +36,8 @@ npm run tauri dev
 
 `TRUE_SOTA_WEB_TOKEN` 不会写入仓库；默认也不会读取浏览器 Cookie 或 localStorage。
 
+桌面端不会显示静态 demo 余额。未设置真实凭证时只显示配置类 ErrorBall；设置 `TRUE_SOTA_API_KEY` 或 `TRUE_SOTA_WEB_TOKEN` 后，每 30 秒自动刷新一次。
+
 Windows 安装包构建：
 
 ```powershell

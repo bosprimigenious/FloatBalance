@@ -71,6 +71,8 @@ Authorization: Bearer <TRUE_SOTA_WEB_TOKEN>
 
 ## 3. 运行方式
 
+桌面端不会显示静态 demo 余额。未设置真实凭证时只显示配置类 ErrorBall；设置凭证后每 30 秒自动刷新。
+
 仅接 API Key 余额：
 
 ```powershell

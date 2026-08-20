@@ -127,4 +127,6 @@ test-results/floatbalance-visual-check.png
 
 - 浏览器登录 token 存在于前端认证流程中，但本项目不读取该值。
 - 桌面端只从本地环境变量读取用户显式提供的 `TRUE_SOTA_API_KEY` 或 `TRUE_SOTA_WEB_TOKEN`。
-- 当前机器未检测到 `TRUE_SOTA_API_KEY`，因此直接运行会显示配置缺失 ErrorBall，同时保留 Sub2 / DeepSeek demo 余额。
+- 当前机器未检测到 `TRUE_SOTA_API_KEY`，因此直接运行会显示配置缺失 ErrorBall。
+- 桌面端不显示静态 demo 余额；只有浏览器预览环境保留 Sub2 / DeepSeek demo 数据。
+- 真实接入后每 30 秒自动轮询刷新。
